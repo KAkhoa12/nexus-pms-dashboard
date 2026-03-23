@@ -31,6 +31,9 @@ type ApiErrorBody = { message?: string };
 type DeletedMode = "active" | "trash" | "all";
 type MetadataEntry = { key: string; value: string };
 const ACTIVE_WORKSPACE_STORAGE_KEY = "active_workspace_key";
+const MAX_ACTION_LOOKUP_PAGES = 20;
+const OWNER_SCOPE_ROOM = "ROOM";
+const OWNER_SCOPE_RENTER = "RENTER";
 
 type AssetFormState = {
   renterId: string;
@@ -192,8 +195,11 @@ function resolveAssetImageUrl(
   const normalized = rawUrl.trim();
   if (!normalized) return normalized;
 
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)
+    ?.trim()
+    .replace(/\/+$/, "");
   const toAbsolute = (relativePath: string) =>
-    new URL(relativePath, window.location.origin).toString();
+    new URL(relativePath, apiBaseUrl || window.location.origin).toString();
   const encodedObjectName = (value: string) =>
     value
       .split("/")
@@ -305,7 +311,13 @@ export function MaterialsAssetsPage() {
   const [newTypeName, setNewTypeName] = useState("");
   const [editingTypeId, setEditingTypeId] = useState<number | null>(null);
   const [editingTypeName, setEditingTypeName] = useState("");
-  const handledCreateActionRef = useRef<string | null>(null);
+  const handledQueryActionRef = useRef<string | null>(null);
+  const [queryOwnerScope, setQueryOwnerScope] = useState<"ROOM" | "RENTER">(
+    OWNER_SCOPE_RENTER,
+  );
+  const [assetOwnerScope, setAssetOwnerScope] = useState<"ROOM" | "RENTER">(
+    OWNER_SCOPE_RENTER,
+  );
 
   const effectiveAccessToken = accessToken || getAccessToken();
   const effectiveWorkspaceKey =
@@ -347,29 +359,54 @@ export function MaterialsAssetsPage() {
     const query = new URLSearchParams(location.search);
     const roomIdRaw = (query.get("room_id") || "").trim();
     const action = (query.get("action") || "").trim().toLowerCase();
+    const assetIdRaw = (query.get("asset_id") || "").trim();
+    const ownerScopeRaw = (query.get("owner_scope") || "").trim().toUpperCase();
     const parsedRoomId =
       /^\d+$/.test(roomIdRaw) && Number(roomIdRaw) > 0
         ? Number(roomIdRaw)
         : null;
+    const parsedAssetId =
+      /^\d+$/.test(assetIdRaw) && Number(assetIdRaw) > 0
+        ? Number(assetIdRaw)
+        : null;
+    const parsedOwnerScope =
+      ownerScopeRaw === OWNER_SCOPE_ROOM
+        ? OWNER_SCOPE_ROOM
+        : OWNER_SCOPE_RENTER;
+    setQueryOwnerScope(parsedOwnerScope);
 
     if (parsedRoomId) {
       setRoomFilter(String(parsedRoomId));
       setPage(1);
     }
 
-    if (action !== "create") {
-      handledCreateActionRef.current = null;
+    if (action !== "create" && action !== "edit") {
+      handledQueryActionRef.current = null;
       return;
     }
 
     const actionKey = `${location.pathname}?${location.search}`;
-    if (handledCreateActionRef.current === actionKey) {
+    if (handledQueryActionRef.current === actionKey) {
       return;
     }
-    handledCreateActionRef.current = actionKey;
-    openCreateAssetDialog(parsedRoomId);
+    handledQueryActionRef.current = actionKey;
+
+    if (action === "create") {
+      openCreateAssetDialog(parsedRoomId, parsedOwnerScope);
+    } else if (action === "edit") {
+      if (parsedAssetId) {
+        void openEditAssetDialogById(
+          parsedAssetId,
+          parsedRoomId,
+          parsedOwnerScope,
+        );
+      } else {
+        toast.error("Thiếu mã tài sản để mở trang chỉnh sửa.");
+      }
+    }
 
     query.delete("action");
+    query.delete("asset_id");
     const nextSearch = query.toString();
     navigate(
       {
@@ -463,7 +500,10 @@ export function MaterialsAssetsPage() {
     setIsTypeDialogOpen(nextOpen);
   }
 
-  function openCreateAssetDialog(initialRoomId?: number | null) {
+  function openCreateAssetDialog(
+    initialRoomId?: number | null,
+    ownerScope: "ROOM" | "RENTER" = queryOwnerScope,
+  ) {
     setEditingAssetId(null);
     setAssetDialogReadonly(false);
     const fallbackRoomId =
@@ -473,9 +513,45 @@ export function MaterialsAssetsPage() {
           ? Number(roomFilter)
           : null;
     setForm(buildEmptyForm(renters, assetTypes, fallbackRoomId));
+    setAssetOwnerScope(ownerScope);
     setAssetRenterKeyword("");
     setMetadataEntries([{ key: "", value: "" }]);
     setIsAssetDialogOpen(true);
+  }
+
+  async function openEditAssetDialogById(
+    assetId: number,
+    roomId: number | null,
+    ownerScope: "ROOM" | "RENTER" = queryOwnerScope,
+  ): Promise<void> {
+    try {
+      let currentPage = 1;
+      let totalPages = 1;
+
+      while (
+        currentPage <= totalPages &&
+        currentPage <= MAX_ACTION_LOOKUP_PAGES
+      ) {
+        const response = await materialsAssetsApi.list({
+          mode: "active",
+          page: currentPage,
+          itemsPerPage: 200,
+          roomId: roomId || undefined,
+          ownerScope,
+        });
+        const found = response.items.find((item) => item.id === assetId);
+        if (found) {
+          openEditAssetDialog(found, false);
+          return;
+        }
+        totalPages = Math.max(1, response.pagination.total_pages);
+        currentPage += 1;
+      }
+
+      toast.error("Không tìm thấy tài sản để chỉnh sửa.");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Không thể tải dữ liệu tài sản."));
+    }
   }
 
   function openEditAssetDialog(item: MaterialAsset, readonly = false) {
@@ -488,7 +564,7 @@ export function MaterialsAssetsPage() {
           ? [item.primary_image_url]
           : [""];
     setForm({
-      renterId: String(item.renter_id),
+      renterId: item.renter_id ? String(item.renter_id) : "",
       roomId: item.room_id ? String(item.room_id) : "",
       assetTypeId: String(item.asset_type_id),
       name: item.name,
@@ -501,6 +577,13 @@ export function MaterialsAssetsPage() {
       primaryImageUrl: item.primary_image_url ?? "",
       imageUrls: mappedImageUrls,
     });
+    setAssetOwnerScope(
+      String(item.owner_scope || "")
+        .trim()
+        .toUpperCase() === OWNER_SCOPE_ROOM
+        ? OWNER_SCOPE_ROOM
+        : OWNER_SCOPE_RENTER,
+    );
     setAssetRenterKeyword(item.renter_full_name || "");
     setMetadataEntries(parseMetadataEntries(item.metadata_json));
     setIsAssetDialogOpen(true);
@@ -605,9 +688,12 @@ export function MaterialsAssetsPage() {
     const roomId = Number(form.roomId);
     const assetTypeId = Number(form.assetTypeId);
     const quantity = parsePositiveNumber(form.quantity);
-    if (!renterId || !assetTypeId || !form.name.trim()) {
+    const isRoomScope = assetOwnerScope === OWNER_SCOPE_ROOM;
+    if ((!isRoomScope && !renterId) || !assetTypeId || !form.name.trim()) {
       toast.error(
-        "Vui lòng chọn khách thuê, loại tài sản và nhập tên tài sản.",
+        isRoomScope
+          ? "Vui lòng chọn loại tài sản và nhập tên tài sản."
+          : "Vui lòng chọn khách thuê, loại tài sản và nhập tên tài sản.",
       );
       return;
     }
@@ -625,7 +711,11 @@ export function MaterialsAssetsPage() {
     const payload = {
       room_id:
         Number.isFinite(roomId) && roomId > 0 ? Math.trunc(roomId) : undefined,
-      renter_id: renterId,
+      renter_id:
+        Number.isFinite(renterId) && renterId > 0
+          ? Math.trunc(renterId)
+          : undefined,
+      owner_scope: assetOwnerScope,
       asset_type_id: assetTypeId,
       name: form.name.trim(),
       quantity,

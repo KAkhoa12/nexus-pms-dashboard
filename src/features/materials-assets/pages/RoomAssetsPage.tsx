@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { areasApi } from "@/features/areas/api/areas.api";
-import type { Area, Branch, Building, Room, RoomType } from "@/features/ops/types";
+import type {
+  Area,
+  Branch,
+  Building,
+  Room,
+  RoomType,
+} from "@/features/ops/types";
 import { branchesApi } from "@/features/branches/api/branches.api";
 import { buildingsApi } from "@/features/buildings/api/buildings.api";
 import { materialsAssetsApi } from "@/features/materials-assets/api/materials-assets.api";
@@ -42,9 +48,9 @@ export function RoomAssetsPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
-  const [assetCountByRoom, setAssetCountByRoom] = useState<Record<number, number>>(
-    {},
-  );
+  const [assetCountByRoom, setAssetCountByRoom] = useState<
+    Record<number, number>
+  >({});
 
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -78,7 +84,9 @@ export function RoomAssetsPage() {
       setRoomTypes(roomTypeData);
       setAssetCountByRoom(await loadRoomAssetCounts());
     } catch (error) {
-      toast.error(getErrorMessage(error, "Không thể tải dữ liệu tài sản phòng."));
+      toast.error(
+        getErrorMessage(error, "Không thể tải dữ liệu tài sản phòng."),
+      );
     } finally {
       setLoading(false);
     }
@@ -130,6 +138,7 @@ export function RoomAssetsPage() {
         mode: "active",
         page: currentPage,
         itemsPerPage: 500,
+        ownerScope: "ROOM",
       });
       response.items.forEach((item) => {
         const roomId = Number(item.room_id || 0);
@@ -175,7 +184,10 @@ export function RoomAssetsPage() {
       ) {
         return false;
       }
-      if (roomTypeFilter !== "ALL" && room.room_type_id !== Number(roomTypeFilter)) {
+      if (
+        roomTypeFilter !== "ALL" &&
+        room.room_type_id !== Number(roomTypeFilter)
+      ) {
         return false;
       }
       if (statusFilter !== "ALL" && room.current_status !== statusFilter) {
@@ -225,11 +237,11 @@ export function RoomAssetsPage() {
   }, [page, totalPages]);
 
   function openRoomAssets(roomId: number) {
-    navigate(`/dashboard/materials-assets?room_id=${roomId}`);
+    navigate(`/dashboard/room-assets/${roomId}`);
   }
 
   function addRoomAsset(roomId: number) {
-    navigate(`/dashboard/materials-assets?room_id=${roomId}&action=create`);
+    navigate(`/dashboard/room-assets/${roomId}?action=create`);
   }
 
   return (
@@ -368,10 +380,12 @@ export function RoomAssetsPage() {
                     {areaMap.get(room.area_id) || `#${room.area_id}`}
                   </td>
                   <td className="px-2 py-2">
-                    {buildingMap.get(room.building_id) || `#${room.building_id}`}
+                    {buildingMap.get(room.building_id) ||
+                      `#${room.building_id}`}
                   </td>
                   <td className="px-2 py-2">
-                    {roomTypeMap.get(room.room_type_id) || `#${room.room_type_id}`}
+                    {roomTypeMap.get(room.room_type_id) ||
+                      `#${room.room_type_id}`}
                   </td>
                   <td className="px-2 py-2">{room.floor_number}</td>
                   <td className="px-2 py-2">
@@ -384,12 +398,12 @@ export function RoomAssetsPage() {
                     <div className="flex justify-end gap-2">
                       <Button
                         type="button"
-                        size="sm"
+                        size="icon"
                         variant="outline"
                         onClick={() => openRoomAssets(room.id)}
+                        title="Xem chi tiết tài sản phòng"
                       >
-                        <Eye className="mr-1 h-4 w-4" />
-                        Xem tài sản
+                        <Eye className="h-4 w-4" />
                       </Button>
                       <Button
                         type="button"
@@ -418,8 +432,8 @@ export function RoomAssetsPage() {
 
           <div className="mt-4 flex items-center justify-between text-sm">
             <p className="text-muted-foreground">
-              Tổng {filteredRooms.length} phòng - Trang {Math.min(page, totalPages)}
-              /{totalPages}
+              Tổng {filteredRooms.length} phòng - Trang{" "}
+              {Math.min(page, totalPages)}/{totalPages}
             </p>
             <div className="flex gap-2">
               <Button

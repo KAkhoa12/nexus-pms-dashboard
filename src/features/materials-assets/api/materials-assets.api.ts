@@ -26,7 +26,8 @@ export type MaterialAsset = {
   id: number;
   tenant_id: number;
   room_id: number;
-  renter_id: number;
+  renter_id: number | null;
+  owner_scope: "ROOM" | "RENTER" | string;
   asset_type_id: number;
   name: string;
   identifier: string | null;
@@ -129,6 +130,7 @@ export const materialsAssetsApi = {
     searchKey?: string;
     roomId?: number;
     renterId?: number;
+    ownerScope?: "ROOM" | "RENTER";
     assetTypeId?: number;
   }): Promise<PaginatedResponse<MaterialAsset>> {
     const { data } = await httpClient.get<
@@ -141,6 +143,7 @@ export const materialsAssetsApi = {
         search_key: params.searchKey,
         room_id: params.roomId,
         renter_id: params.renterId,
+        owner_scope: params.ownerScope,
         asset_type_id: params.assetTypeId,
       },
     });
@@ -151,7 +154,8 @@ export const materialsAssetsApi = {
 
   async create(payload: {
     room_id?: number;
-    renter_id: number;
+    renter_id?: number;
+    owner_scope?: "ROOM" | "RENTER";
     asset_type_id: number;
     name: string;
     identifier?: string | null;
@@ -194,6 +198,7 @@ export const materialsAssetsApi = {
     payload: Partial<{
       room_id: number;
       renter_id: number;
+      owner_scope: "ROOM" | "RENTER";
       asset_type_id: number;
       name: string;
       identifier: string | null;

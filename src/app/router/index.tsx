@@ -40,6 +40,7 @@ import { RoomsPage } from "@/features/rooms";
 import {
   MaterialsAssetsPage,
   MaterialsAssetTypesPage,
+  RoomAssetsDetailPage,
   RoomAssetsPage,
 } from "@/features/materials-assets";
 import { ServiceFeesPage } from "@/features/service-fees";
@@ -76,6 +77,35 @@ function LegacyContractDetailRedirect() {
   return (
     <Navigate
       to={leaseId ? `/dashboard/contracts/${leaseId}` : "/dashboard/contracts"}
+      replace
+    />
+  );
+}
+
+function LegacyRoomAssetsDetailRedirect() {
+  const { roomId } = useParams<{ roomId?: string }>();
+  return (
+    <Navigate
+      to={
+        roomId ? `/dashboard/room-assets/${roomId}` : "/dashboard/room-assets"
+      }
+      replace
+    />
+  );
+}
+
+function LegacyRoomAssetEditRedirect() {
+  const { roomId, assetId } = useParams<{
+    roomId?: string;
+    assetId?: string;
+  }>();
+  return (
+    <Navigate
+      to={
+        roomId && assetId
+          ? `/dashboard/room-assets/${roomId}/assets/${assetId}/edit`
+          : "/dashboard/room-assets"
+      }
       replace
     />
   );
@@ -145,6 +175,11 @@ export const router = createBrowserRouter([
   {
     path: "/room-assets",
     element: <Navigate to="/dashboard/room-assets" replace />,
+  },
+  { path: "/room-assets/:roomId", element: <LegacyRoomAssetsDetailRedirect /> },
+  {
+    path: "/room-assets/:roomId/assets/:assetId/edit",
+    element: <LegacyRoomAssetEditRedirect />,
   },
   {
     path: "/finance-overview",
@@ -465,6 +500,37 @@ export const router = createBrowserRouter([
             ]}
           >
             <RoomAssetsPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: "room-assets/:roomId",
+        element: (
+          <PermissionGuard
+            permissions={[
+              "user:mangage",
+              "materials_assets:view",
+              "rooms:view",
+              "room:view",
+            ]}
+          >
+            <RoomAssetsDetailPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: "room-assets/:roomId/assets/:assetId/edit",
+        element: (
+          <PermissionGuard
+            permissions={[
+              "user:mangage",
+              "materials_assets:view",
+              "materials_assets:update",
+              "rooms:view",
+              "room:view",
+            ]}
+          >
+            <RoomAssetsDetailPage />
           </PermissionGuard>
         ),
       },
