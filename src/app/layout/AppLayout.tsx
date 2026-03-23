@@ -262,6 +262,7 @@ export function AppLayout() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isAiSheetOpen, setIsAiSheetOpen] = useState(false);
+  const [aiQuickPrompt, setAiQuickPrompt] = useState("");
   const [workspaceTeams, setWorkspaceTeams] = useState<Team[]>([]);
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
   const [workspaceReady, setWorkspaceReady] = useState(false);
@@ -1084,6 +1085,28 @@ export function AppLayout() {
     navigate(item.path);
   }
 
+  function openAiAssistantWithPrompt(prompt?: string): void {
+    if (!canViewBusinessAi) {
+      toast.error("Bạn chưa có quyền sử dụng AI trợ lý.");
+      return;
+    }
+
+    const normalizedPrompt = (prompt ?? aiQuickPrompt).trim();
+    setIsAiSheetOpen(false);
+
+    if (!normalizedPrompt) {
+      navigate("/dashboard/ai-assistant");
+      return;
+    }
+
+    const params = new URLSearchParams();
+    params.set("q", normalizedPrompt);
+    params.set("auto", "1");
+    params.set("t", `${Date.now()}`);
+    navigate(`/dashboard/ai-assistant?${params.toString()}`);
+    setAiQuickPrompt("");
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-muted/20">
       <aside
@@ -1887,6 +1910,16 @@ export function AppLayout() {
                         <Label htmlFor="ai-workspace-input">Yêu cầu AI</Label>
                         <Input
                           id="ai-workspace-input"
+                          value={aiQuickPrompt}
+                          onChange={(event) =>
+                            setAiQuickPrompt(event.target.value)
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              openAiAssistantWithPrompt();
+                            }
+                          }}
                           placeholder="Nhập yêu cầu xử lý công việc..."
                         />
                       </div>
@@ -1896,7 +1929,9 @@ export function AppLayout() {
                             Mở trang AI đầy đủ
                           </Link>
                         </Button>
-                        <Button>Gửi cho AI</Button>
+                        <Button onClick={() => openAiAssistantWithPrompt()}>
+                          Gửi cho AI
+                        </Button>
                       </div>
                     </div>
                   </SheetContent>
