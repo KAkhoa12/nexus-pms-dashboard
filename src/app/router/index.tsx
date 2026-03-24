@@ -13,6 +13,7 @@ import { BuildingsPage } from "@/features/buildings";
 import {
   ContractsCreatePage,
   ContractsDetailPage,
+  ContractsInstallmentEditPage,
   ContractsPage,
 } from "@/features/contracts";
 import { DeveloperPortalPage } from "@/features/developer-portal";
@@ -29,7 +30,7 @@ import {
 import { DepositDetailPage, DepositsPage } from "@/features/deposits";
 import { FormTemplatesPage } from "@/features/form-templates";
 import { InvoicesPage } from "@/features/invoices";
-import { LandingPage } from "@/features/landing";
+import { DemoPage, DocsPage, LandingPage } from "@/features/landing";
 import { PermissionsPage } from "@/features/permissions";
 import { CustomerAppointmentsPage } from "@/features/customer-appointments";
 import { CustomerDetailPage, CustomersPage } from "@/features/customers";
@@ -82,6 +83,23 @@ function LegacyContractDetailRedirect() {
   );
 }
 
+function LegacyContractInstallmentEditRedirect() {
+  const { leaseId, invoiceId } = useParams<{
+    leaseId?: string;
+    invoiceId?: string;
+  }>();
+  return (
+    <Navigate
+      to={
+        leaseId && invoiceId
+          ? `/dashboard/contracts/${leaseId}/installments/${invoiceId}/edit`
+          : "/dashboard/contracts"
+      }
+      replace
+    />
+  );
+}
+
 function LegacyRoomAssetsDetailRedirect() {
   const { roomId } = useParams<{ roomId?: string }>();
   return (
@@ -113,6 +131,8 @@ function LegacyRoomAssetEditRedirect() {
 
 export const router = createBrowserRouter([
   { path: "/", element: <LandingPage /> },
+  { path: "/docs", element: <DocsPage /> },
+  { path: "/demo", element: <DemoPage /> },
   { path: "/login", element: <Navigate to="/dashboard/login" replace /> },
   {
     path: "/apartment-map",
@@ -159,6 +179,10 @@ export const router = createBrowserRouter([
   {
     path: "/contracts/:leaseId",
     element: <LegacyContractDetailRedirect />,
+  },
+  {
+    path: "/contracts/:leaseId/installments/:invoiceId/edit",
+    element: <LegacyContractInstallmentEditRedirect />,
   },
   {
     path: "/customers",
@@ -433,6 +457,23 @@ export const router = createBrowserRouter([
             ]}
           >
             <ContractsDetailPage />
+          </PermissionGuard>
+        ),
+      },
+      {
+        path: "contracts/:leaseId/installments/:invoiceId/edit",
+        element: (
+          <PermissionGuard
+            permissions={[
+              "user:mangage",
+              "leases:view",
+              "lease:view",
+              "leases:update",
+              "lease:update",
+              "leases:manage",
+            ]}
+          >
+            <ContractsInstallmentEditPage />
           </PermissionGuard>
         ),
       },

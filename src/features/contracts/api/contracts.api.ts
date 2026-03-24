@@ -9,6 +9,8 @@ export type LeaseInstallmentItem = {
   quantity: string;
   unit_price: string;
   amount: string;
+  note?: string | null;
+  evidence_image_urls: string[];
 };
 
 export type LeaseInstallment = {
@@ -24,6 +26,16 @@ export type LeaseInstallment = {
   content: string;
   content_html: string;
   items: LeaseInstallmentItem[];
+};
+
+export type LeaseInvoiceAttachmentUploadResult = {
+  object_name: string;
+  file_name: string;
+  file_url: string;
+  access_url: string;
+  mime_type: string | null;
+  size_bytes: number;
+  is_image: boolean;
 };
 
 export type LeaseDetail = {
@@ -169,6 +181,8 @@ export const contractsApi = {
         description: string;
         quantity: string;
         unit_price: string;
+        note?: string | null;
+        evidence_image_urls?: string[];
       }>;
     },
   ): Promise<LeaseInstallment> {
@@ -178,6 +192,26 @@ export const contractsApi = {
     );
     if (!data.response)
       throw new Error(data.message || "Không thể cập nhật kỳ thanh toán.");
+    return data.response;
+  },
+
+  async uploadInstallmentAttachment(
+    file: File,
+  ): Promise<LeaseInvoiceAttachmentUploadResult> {
+    const formData = new FormData();
+    formData.append("file", file);
+    const { data } = await httpClient.post<
+      ApiEnvelope<LeaseInvoiceAttachmentUploadResult>
+    >("/leases/uploads", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    if (!data.response) {
+      throw new Error(
+        data.message || "Không thể tải ảnh minh chứng hóa đơn lên MinIO.",
+      );
+    }
     return data.response;
   },
 

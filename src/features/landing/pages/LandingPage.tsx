@@ -9,6 +9,7 @@ import {
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PublicHeader } from "@/features/landing/components/PublicHeader";
 
 const freeFeatures = [
   "Quản lý phòng trọ, khách thuê, hóa đơn cơ bản",
@@ -61,26 +62,7 @@ export function LandingPage() {
       </div>
 
       <main className="relative z-10 mx-auto w-full max-w-6xl px-4 pb-20 pt-8 md:px-6 lg:px-10">
-        <header className="mb-16 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-5">
-            <img
-              src="/logo.png"
-              alt="QuanLyPhongTro"
-              className="h-16 w-auto object-contain"
-            />
-            <span className="text-2xl font-bold">House Smart Business</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              asChild
-              className="bg-[#0f766e] text-white hover:bg-[#115e59]"
-            >
-              <Link to="/dashboard/login">
-                Đăng nhập hệ thống <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </header>
+        <PublicHeader />
 
         <section className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/85 px-6 py-12 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)] md:px-10">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#fff1d8] px-3 py-1 text-xs font-semibold text-[#8a4f00]">
